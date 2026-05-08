@@ -4,7 +4,7 @@ plugins {
     application
 }
 
-group = "com.example.studybuddy"
+group = "dev.community.gdg.campus.korea.koog"
 version = "1.0.0"
 
 repositories {
@@ -22,5 +22,5 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.example.studybuddy.MainKt")
+    mainClass.set("dev.community.gdg.campus.korea.koog.MainKt")
 }

@@ -1,4 +1,4 @@
-package com.example.studybuddy
+package dev.community.gdg.campus.korea.koog
 
 import kotlinx.coroutines.runBlocking
 
