@@ -1,0 +1,11 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+.omc/
+.claude/
+notes/*.md
+!notes/.gitkeep
+exam-prep/*.md
+!exam-prep/.gitkeep
