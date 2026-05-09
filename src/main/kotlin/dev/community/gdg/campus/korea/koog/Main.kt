@@ -1,5 +1,7 @@
 package dev.community.gdg.campus.korea.koog
 
+import ai.koog.agents.chatMemory.feature.ChatMemory
+import ai.koog.agents.chatMemory.feature.InMemoryChatHistoryProvider
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.clients.google.GoogleModels
@@ -35,8 +37,13 @@ fun main() = runBlocking {
         promptExecutor = simpleGoogleAIExecutor(apiKey),
         systemPrompt = studyBuddyPrompt,
         llmModel = GoogleModels.Gemini2_5Flash,
-        toolRegistry = toolRegistry
-    )
+        toolRegistry = toolRegistry,
+    ) {
+        install(ChatMemory) {
+            chatHistoryProvider = InMemoryChatHistoryProvider()
+            windowSize(20)
+        }
+    }
 
     val response = agent.run(
         """
@@ -44,7 +51,8 @@ fun main() = runBlocking {
         2. notes/ 폴더에 있는 기존 복습 노트도 참고해줘
         3. student-code/avl_tree.cpp 학생 코드를 분석해줘
         4. 과제 풀이 가이드를 만들어서 notes/hw-avl-guide.md로 저장해줘
-        """.trimIndent()
+        """.trimIndent(),
+        "study-session",
     )
     println(response)
 }
