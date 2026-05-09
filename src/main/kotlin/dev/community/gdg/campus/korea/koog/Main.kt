@@ -7,6 +7,11 @@ import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import dev.community.gdg.campus.korea.koog.command.ClearCommand
+import dev.community.gdg.campus.korea.koog.command.CommandRegistry
+import dev.community.gdg.campus.korea.koog.command.CommandResult
+import dev.community.gdg.campus.korea.koog.command.ExitCommand
+import dev.community.gdg.campus.korea.koog.command.HelpCommand
 import dev.community.gdg.campus.korea.koog.tools.generateExamPrep
 import dev.community.gdg.campus.korea.koog.tools.listFiles
 import dev.community.gdg.campus.korea.koog.tools.readFile
@@ -168,6 +173,15 @@ suspend fun runStudySession(apiKey: String) {
 
     Banner.printWelcome()
 
+    val commandRegistry =
+        CommandRegistry().apply {
+            register(ExitCommand())
+            register(ClearCommand())
+            register(HelpCommand(this))
+        }
+
+    var chatSessionId = "study-session"
+
     while (true) {
         print("학생 > ")
         val input = readLine()
@@ -176,14 +190,28 @@ suspend fun runStudySession(apiKey: String) {
             break
         }
         val trimmed = input.trim()
-        if (trimmed.equals("exit", ignoreCase = true) || trimmed == "/exit") {
-            Banner.printGoodbye()
-            break
-        }
         if (input.isBlank()) continue
 
+        val commandOutcome = commandRegistry.execute(trimmed)
+        when (commandOutcome) {
+            CommandResult.Exit -> {
+                Banner.printGoodbye()
+                break
+            }
+            CommandResult.ClearSession -> {
+                chatSessionId = "study-session-${System.nanoTime()}"
+                continue
+            }
+            is CommandResult.Success -> continue
+            is CommandResult.Error -> {
+                println("\n${commandOutcome.message}\n")
+                continue
+            }
+            null -> { /* 에이전트로 전달 */ }
+        }
+
         try {
-            val response = agent.run(trimmed, "study-session")
+            val response = agent.run(trimmed, chatSessionId)
             println("\n조교 > $response\n")
         } catch (e: LLMClientException) {
             val msg = e.message.orEmpty()
