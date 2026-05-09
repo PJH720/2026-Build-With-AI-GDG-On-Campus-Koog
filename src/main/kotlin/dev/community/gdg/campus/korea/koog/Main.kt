@@ -212,7 +212,7 @@ suspend fun runStudySession(apiKey: String) {
             break
         }
         val trimmed = input.trim()
-        if (input.isBlank()) continue
+        if (trimmed.isBlank()) continue
 
         val commandOutcome = commandRegistry.execute(trimmed)
         when (commandOutcome) {

@@ -8,8 +8,16 @@ interface Command {
     suspend fun execute(args: List<String> = emptyList()): CommandResult
 
     fun matches(input: String): Boolean {
-        val commandName = input.removePrefix("/").split(" ").firstOrNull() ?: return false
-        return commandName == name || commandName in aliases
+        val trimmed = input.trim()
+        if (!trimmed.startsWith("/")) return false
+        val commandName =
+            trimmed.removePrefix("/")
+                .split(" ")
+                .firstOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?: return false
+        val key = commandName.lowercase()
+        return key == name.lowercase() || aliases.any { it.lowercase() == key }
     }
 }
 
@@ -37,8 +45,10 @@ class CommandRegistry {
     fun getAllCommands(): List<Command> = commands.toList()
 
     suspend fun execute(input: String): CommandResult? {
-        val command = commands.find { it.matches(input) } ?: return null
-        val args = input.removePrefix("/").split(" ").drop(1).filter { it.isNotBlank() }
+        val trimmed = input.trim()
+        val command = commands.find { it.matches(trimmed) } ?: return null
+        val args =
+            trimmed.removePrefix("/").split(" ").drop(1).filter { it.isNotBlank() }
         return command.execute(args)
     }
 }
