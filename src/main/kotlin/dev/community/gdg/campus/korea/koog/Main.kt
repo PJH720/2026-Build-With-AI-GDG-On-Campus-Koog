@@ -6,6 +6,7 @@ import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import dev.community.gdg.campus.korea.koog.tools.generateExamPrep
 import dev.community.gdg.campus.korea.koog.tools.listFiles
 import dev.community.gdg.campus.korea.koog.tools.readFile
 import dev.community.gdg.campus.korea.koog.tools.saveNote
@@ -28,6 +29,7 @@ suspend fun runStudySession(apiKey: String) {
     val toolRegistry = ToolRegistry {
         tool(::readFile)
         tool(::saveNote)
+        tool(::generateExamPrep)
         tool(::listFiles)
     }
 
