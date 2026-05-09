@@ -2,61 +2,73 @@
 
 Kotlin / Koog 기반 학습 에이전트 코드랩의 **CLI 배포** 안내입니다. 행사·코드랩 문맥은 [README.ko.md](./README.ko.md)를 참고하세요.
 
-## 준비 사항
+## How to Use
 
-- **JDK 21** — Gradle이 설정한 JVM toolchain과 일치해야 합니다.
-- **`GOOGLE_API_KEY`** — Google Gemini API 키를 환경 변수로 설정합니다.
+### 1. Prerequisites
+
+- **JDK 21** — must match the JVM toolchain configured in Gradle.
+- **`GOOGLE_API_KEY`** — set your Google Gemini API key in the environment.
 
 ```bash
 export GOOGLE_API_KEY='YOUR_API_KEY'
 ```
 
-## 배포 산출물 만들기
+### 2. Run during development
 
-Gradle **Application** 플러그인으로 실행 가능한 배포 디렉터리 또는 ZIP을 만듭니다.
+```bash
+./gradlew run
+```
 
-### 디렉터리 형태 (`installDist`)
+The `run` task uses `standardInput = System.in` for interactive stdin. Use a real **terminal (TTY)** so prompts work the same way when you run the packaged CLI below.
+
+### 3. Build an unpacked distribution (`installDist`)
+
+Creates `build/install/study-buddy-agent-codelab/` with `bin/` and `lib/`.
 
 ```bash
 ./gradlew installDist
 ```
 
-생성 위치:
-
-- **Unix/macOS 실행 스크립트**: `build/install/study-buddy-agent-codelab/bin/study-buddy-agent-codelab`
-- **Windows**: `build/install/study-buddy-agent-codelab/bin/study-buddy-agent-codelab.bat`
-- **라이브러리 JAR**: `build/install/study-buddy-agent-codelab/lib/`
-
-압축해서 다른 머신으로 옮길 때는 위 **`study-buddy-agent-codelab`** 디렉터리 전체를 포함하면 됩니다.
-
-### ZIP 아카이브 (`distZip`)
-
-```bash
-./gradlew distZip
-```
-
-생성물: `build/distributions/study-buddy-agent-codelab.zip` (루트 프로젝트 이름 기준)
-
-받는 쪽에서 압축을 풀고 `bin/` 아래 스크립트를 실행합니다.
-
-## 실행 방법
-
-환경 변수를 설정한 터미널에서 스크립트를 실행합니다.
+Run:
 
 ```bash
 cd build/install/study-buddy-agent-codelab
 ./bin/study-buddy-agent-codelab
 ```
 
-또는 ZIP을 풀었다면 동일하게 `bin/` 경로를 지정합니다.
+- **Windows**: `build\install\study-buddy-agent-codelab\bin\study-buddy-agent-codelab.bat`
+- To copy to another machine, archive the whole **`study-buddy-agent-codelab`** folder under `build/install/`.
 
-### 개발 중 Gradle로 실행
+### 4. Build a ZIP archive (`distZip`)
 
 ```bash
-./gradlew run
+./gradlew distZip
 ```
 
-대화형 표준 입력을 쓰는 경우를 위해 `run` 태스크에 `standardInput = System.in`이 설정되어 있습니다. 배포 바이너리도 **터미널(TTY)** 에서 실행해야 프롬프트 입력이 정상 동작합니다.
+Artifact (version comes from `build.gradle.kts`):
+
+- **`build/distributions/study-buddy-agent-codelab-1.0.0.zip`**
+
+After unzipping you get a root folder such as `study-buddy-agent-codelab-1.0.0/` containing `bin/` and `lib/`. With `GOOGLE_API_KEY` set:
+
+```bash
+cd study-buddy-agent-codelab-1.0.0
+./bin/study-buddy-agent-codelab
+```
+
+Gradle may also emit a `.tar` next to the ZIP under `build/distributions/`; either format has the same layout.
+
+---
+
+### 한국어 요약
+
+| 목적 | 명령 |
+|------|------|
+| 개발 실행 | `./gradlew run` |
+| 로컬 배포 폴더 생성 | `./gradlew installDist` → `build/install/study-buddy-agent-codelab/bin/study-buddy-agent-codelab` |
+| ZIP 배포물 | `./gradlew distZip` → `build/distributions/study-buddy-agent-codelab-1.0.0.zip` 압축 해제 후 `bin/` 스크립트 실행 |
+
+사전 조건: **JDK 21**, 환경 변수 **`GOOGLE_API_KEY`** 설정. 대화형 입력은 **TTY 터미널**에서 실행하세요.
 
 ## 기본 진입점 동작
 
