@@ -4,6 +4,7 @@ import ai.koog.agents.chatMemory.feature.ChatMemory
 import ai.koog.agents.chatMemory.feature.InMemoryChatHistoryProvider
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
 import dev.community.gdg.campus.korea.koog.tools.generateExamPrep
@@ -29,8 +30,8 @@ suspend fun runStudySession(apiKey: String) {
     val toolRegistry = ToolRegistry {
         tool(::readFile)
         tool(::saveNote)
-        tool(::generateExamPrep)
         tool(::listFiles)
+        tool(::generateExamPrep)
     }
 
     val agent = AIAgent(
@@ -46,15 +47,37 @@ suspend fun runStudySession(apiKey: String) {
     }
 
     println("=== 과제 도우미 시작 ===")
-    println("질문을 입력하세요 (종료: exit)\n")
+    println("질문을 입력하세요. 종료는 exit 입력.")
 
     while (true) {
         print("학생 > ")
         val input = readLine() ?: break
         if (input == "exit") break
+        if (input.isBlank()) continue
 
-        val response = agent.run(input, "study-session")
-        println("\n조교 > $response\n")
+        try {
+            val response = agent.run(input, "study-session")
+            println("\n조교 > $response\n")
+        } catch (e: LLMClientException) {
+            val msg = e.message.orEmpty()
+            val isQuota =
+                msg.contains("429") ||
+                    msg.contains("RESOURCE_EXHAUSTED") ||
+                    msg.contains("quota", ignoreCase = true)
+            if (isQuota) {
+                System.err.println(
+                    """
+                    
+                    [할당량 초과] Gemini API 요청 한도에 걸렸습니다. (무료 등급은 모델·프로젝트별 일일 요청 수 제한이 있습니다.)
+                    몇 분 후 재시도하거나, Google AI Studio에서 한도·청구를 확인하세요.
+                    문서: https://ai.google.dev/gemini-api/docs/rate-limits
+                    
+                    """.trimIndent(),
+                )
+            } else {
+                System.err.println("\n[조교 호출 오류] ${e.message}\n")
+            }
+        }
     }
 }
 
