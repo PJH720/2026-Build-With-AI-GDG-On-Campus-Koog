@@ -10,7 +10,12 @@ Build with AI 2026 | GDG on Campus Korea 코드랩 프로젝트
 ## 코드랩
 
 - **코드랩 링크**: https://l2hyunwoo.github.io/koog-practice-univ/codelab/koog-study-buddy-agent
-- **코드랩 레포**: https://github.com/l2hyunwoo/2026-Build-With-AI-GDG-On-Campus-Koog
+- **코드랩 레포(업스트림)**: https://github.com/l2hyunwoo/2026-Build-With-AI-GDG-On-Campus-Koog
+
+## GitHub 릴리스
+
+- **릴리스**: [github.com/PJH720/2026-Build-With-AI-GDG-On-Campus-Koog/releases](https://github.com/PJH720/2026-Build-With-AI-GDG-On-Campus-Koog/releases)
+- **v1.0.0** — 릴리스 노트에서 변경 사항과 사용법을 확인하세요. 로컬에서 `./gradlew distZip`으로 만든 ZIP(예: `build/distributions/study-buddy-agent-codelab-1.0.0.zip`)을 GitHub Release에 첨부할 수 있습니다.
 
 ## 브랜치 구조
 
