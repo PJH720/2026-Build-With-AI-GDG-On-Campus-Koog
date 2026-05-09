@@ -26,3 +26,8 @@ kotlin {
 application {
     mainClass.set("dev.community.gdg.campus.korea.koog.MainKt")
 }
+
+// Gradle run은 기본으로 stdin을 JVM에 넘기지 않아 readLine()이 바로 null이 됨 → 대화형 입력 위해 연결
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
