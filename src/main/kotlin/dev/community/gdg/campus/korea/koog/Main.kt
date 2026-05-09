@@ -4,6 +4,8 @@ import ai.koog.agents.chatMemory.feature.ChatMemory
 import ai.koog.agents.chatMemory.feature.InMemoryChatHistoryProvider
 import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.features.eventHandler.feature.EventHandlerConfig
+import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.prompt.executor.clients.LLMClientException
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
@@ -30,6 +32,11 @@ val studyBuddyPrompt = """
     - 반드시 도구를 사용해서 파일을 읽고 저장해.
     - 항상 한국어로 답변해.
 """.trimIndent()
+
+private fun EventHandlerConfig.echoToolCallsToStdout() {
+    onToolCallStarting { println("  🔧 [도구 호출] ${it.toolName}...") }
+    onToolCallCompleted { println("  ✅ [도구 완료] ${it.toolName}") }
+}
 
 private suspend fun runStudyStage(
     label: String,
@@ -79,7 +86,11 @@ suspend fun runStudyTeam(apiKey: String) {
             tool(::readFile)
             tool(::saveNote)
         },
-    )
+    ) {
+        handleEvents {
+            echoToolCallsToStdout()
+        }
+    }
 
     val assignmentAgent = AIAgent(
         promptExecutor = simpleGoogleAIExecutor(apiKey),
@@ -96,7 +107,11 @@ suspend fun runStudyTeam(apiKey: String) {
             tool(::listFiles)
             tool(::saveNote)
         },
-    )
+    ) {
+        handleEvents {
+            echoToolCallsToStdout()
+        }
+    }
 
     val examPrepAgent = AIAgent(
         promptExecutor = simpleGoogleAIExecutor(apiKey),
@@ -113,7 +128,11 @@ suspend fun runStudyTeam(apiKey: String) {
             tool(::listFiles)
             tool(::generateExamPrep)
         },
-    )
+    ) {
+        handleEvents {
+            echoToolCallsToStdout()
+        }
+    }
 
     println("=== 학습 전문가 팀 가동! ===\n")
 
@@ -168,6 +187,9 @@ suspend fun runStudySession(apiKey: String) {
         install(ChatMemory) {
             chatHistoryProvider = InMemoryChatHistoryProvider()
             windowSize(20)
+        }
+        handleEvents {
+            echoToolCallsToStdout()
         }
     }
 
