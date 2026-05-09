@@ -1,6 +1,6 @@
 # Study Buddy Agent — CLI deployment
 
-**CLI deployment** guide for the Kotlin / Koog–based Study Buddy learning-agent codelab. Workshop context (Korean) lives in [README.ko.md](./README.ko.md).
+**CLI deployment** guide for the Kotlin / Koog–based Study Buddy learning-agent codelab. 
 
 ## Workshop context
 
@@ -146,3 +146,4 @@ MIT
 ---
 
 © GDG on Campus Korea · Build with AI 2026 codelab
+- Workshop context (Korean) lives in [README.ko.md](./README.ko.md).
