@@ -25,6 +25,125 @@ val studyBuddyPrompt = """
     - 항상 한국어로 답변해.
 """.trimIndent()
 
+private suspend fun runStudyStage(
+    label: String,
+    stageLabel: String,
+    sessionId: String,
+    block: suspend () -> String,
+): String {
+    try {
+        return block()
+    } catch (e: LLMClientException) {
+        val msg = e.message.orEmpty()
+        val isQuota =
+            msg.contains("429") ||
+                msg.contains("RESOURCE_EXHAUSTED") ||
+                msg.contains("quota", ignoreCase = true)
+        if (isQuota) {
+            System.err.println(
+                """
+
+                [$label 할당량 초과] Gemini API 요청 한도에 걸렸습니다. (무료 등급은 모델·프로젝트별 일일 요청 수 제한이 있습니다.)
+                단계: $stageLabel (세션: $sessionId)
+                몇 분 후 재시도하거나, Google AI Studio에서 한도·청구를 확인하세요.
+                문서: https://ai.google.dev/gemini-api/docs/rate-limits
+
+                """.trimIndent(),
+            )
+        } else {
+            System.err.println("\n[$label 오류] $stageLabel — ${e.message}\n")
+        }
+        throw e
+    }
+}
+
+// 순차 오케스트레이션 — 역할별 System Prompt와 도구 조합으로 전문가 에이전트 세 명 실행 (파일 시스템 = 공유 메모리)
+suspend fun runStudyTeam(apiKey: String) {
+    val reviewerAgent = AIAgent(
+        promptExecutor = simpleGoogleAIExecutor(apiKey),
+        systemPrompt = """
+            너는 강의자료 복습 전문가야.
+            강의 노트를 읽고 핵심 개념만 추출해서 간결한 복습 노트를 만들어.
+            키워드 중심, 시험에 나올 내용 위주로 정리해.
+            반드시 도구를 사용해서 파일을 읽고 저장해.
+            항상 한국어로 답변해.
+        """.trimIndent(),
+        llmModel = GoogleModels.Gemini2_5Flash,
+        toolRegistry = ToolRegistry {
+            tool(::readFile)
+            tool(::saveNote)
+        },
+    )
+
+    val assignmentAgent = AIAgent(
+        promptExecutor = simpleGoogleAIExecutor(apiKey),
+        systemPrompt = """
+            너는 과제 분석 전문가야.
+            과제 요구사항을 분석하고, 기존 복습 노트를 참고해서 풀이 전략을 세워.
+            학생 코드가 있으면 버그도 찾아줘.
+            반드시 도구를 사용해서 파일을 읽고 저장해.
+            항상 한국어로 답변해.
+        """.trimIndent(),
+        llmModel = GoogleModels.Gemini2_5Flash,
+        toolRegistry = ToolRegistry {
+            tool(::readFile)
+            tool(::listFiles)
+            tool(::saveNote)
+        },
+    )
+
+    val examPrepAgent = AIAgent(
+        promptExecutor = simpleGoogleAIExecutor(apiKey),
+        systemPrompt = """
+            너는 시험 대비 자료 전문가야.
+            축적된 복습 노트를 종합해서 치트시트와 예상문제를 만들어.
+            치트시트는 A4 1장 이내, 예상문제는 과제 패턴 기반으로 3문제.
+            반드시 도구를 사용해서 파일을 읽고 저장해.
+            항상 한국어로 답변해.
+        """.trimIndent(),
+        llmModel = GoogleModels.Gemini2_5Flash,
+        toolRegistry = ToolRegistry {
+            tool(::readFile)
+            tool(::listFiles)
+            tool(::generateExamPrep)
+        },
+    )
+
+    println("=== 학습 전문가 팀 가동! ===\n")
+
+    println("[1/3] 복습 정리가가 강의자료를 분석합니다...")
+    val reviewResult = runStudyStage("전문가 팀", "복습 정리", "study-team-review") {
+        reviewerAgent.run(
+            "lecture-notes/week08-avl-tree.md 강의자료를 읽고 복습 노트를 만들어줘",
+            "study-team-review",
+        )
+    }
+    println("복습 완료: $reviewResult\n")
+
+    println("[2/3] 과제 도우미가 과제를 분석합니다...")
+    val assignmentResult = runStudyStage("전문가 팀", "과제 분석", "study-team-assignment") {
+        assignmentAgent.run(
+            """
+                assignments/hw-avl-tree.md 과제를 분석하고, notes/ 폴더의 복습 노트를 참고해서 풀이 가이드를 만들어줘.
+                student-code/avl_tree.cpp도 확인해줘.
+            """.trimIndent(),
+            "study-team-assignment",
+        )
+    }
+    println("과제 분석 완료: $assignmentResult\n")
+
+    println("[3/3] 시험 대비가가 자료를 생성합니다...")
+    val examPrepResult = runStudyStage("전문가 팀", "시험 대비", "study-team-exam") {
+        examPrepAgent.run(
+            "notes/ 폴더의 모든 노트를 읽고 치트시트와 예상문제를 만들어줘",
+            "study-team-exam",
+        )
+    }
+    println("시험 대비 자료 완료: $examPrepResult")
+
+    println("\n=== 전문가 팀 작업 완료! ===")
+}
+
 // 대화형 과제 도움 세션
 suspend fun runStudySession(apiKey: String) {
     val toolRegistry = ToolRegistry {
@@ -84,5 +203,5 @@ suspend fun runStudySession(apiKey: String) {
 fun main() = runBlocking {
     val apiKey = System.getenv("GOOGLE_API_KEY")
         ?: error("GOOGLE_API_KEY 환경변수를 설정해주세요!")
-    runStudySession(apiKey)
+    runStudyTeam(apiKey)
 }
