@@ -11,6 +11,7 @@ import dev.community.gdg.campus.korea.koog.tools.generateExamPrep
 import dev.community.gdg.campus.korea.koog.tools.listFiles
 import dev.community.gdg.campus.korea.koog.tools.readFile
 import dev.community.gdg.campus.korea.koog.tools.saveNote
+import dev.community.gdg.campus.korea.koog.ui.Banner
 import kotlinx.coroutines.runBlocking
 
 val studyBuddyPrompt = """
@@ -165,17 +166,24 @@ suspend fun runStudySession(apiKey: String) {
         }
     }
 
-    println("=== 과제 도우미 시작 ===")
-    println("질문을 입력하세요. 종료는 exit 입력.")
+    Banner.printWelcome()
 
     while (true) {
         print("학생 > ")
-        val input = readLine() ?: break
-        if (input == "exit") break
+        val input = readLine()
+        if (input == null) {
+            Banner.printGoodbye()
+            break
+        }
+        val trimmed = input.trim()
+        if (trimmed.equals("exit", ignoreCase = true) || trimmed == "/exit") {
+            Banner.printGoodbye()
+            break
+        }
         if (input.isBlank()) continue
 
         try {
-            val response = agent.run(input, "study-session")
+            val response = agent.run(trimmed, "study-session")
             println("\n조교 > $response\n")
         } catch (e: LLMClientException) {
             val msg = e.message.orEmpty()
