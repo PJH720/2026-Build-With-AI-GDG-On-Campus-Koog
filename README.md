@@ -2,32 +2,6 @@
 
 **CLI deployment** guide for the Kotlin / Koog–based Study Buddy learning-agent codelab. 
 
-## Workshop context
-
-- **Series**: Build with AI 2026 · GDG on Campus Korea codelab
-- **Event page**: https://event-us.kr/gdgcampuskorea/event/122871
-- **Codelab**: https://l2hyunwoo.github.io/koog-practice-univ/codelab/koog-study-buddy-agent
-- **Upstream codelab repo**: https://github.com/l2hyunwoo/2026-Build-With-AI-GDG-On-Campus-Koog
-
-### Branch map
-
-| Branch       | Contents                                              |
-| ------------ | ----------------------------------------------------- |
-| `initial`    | Skeleton — build setup + data files                   |
-| `page3`      | First agent + role assignment                         |
-| `page4`      | Read lecture materials → review notes                 |
-| `page5`      | Assignment analysis + note reuse                      |
-| `page6`      | ChatMemory interactive homework help                  |
-| `page7`      | Auto-generated exam-prep materials                    |
-| `page8`      | Multi-agent learning-expert team                      |
-| `page9`      | CLI design + packaging                                |
-| `complete`   | Final polished version                                |
-
-```bash
-git checkout initial    # start the codelab
-git checkout page5      # peek ahead if stuck
-```
-
 ## Tech stack
 
 - Kotlin 2.3.21
