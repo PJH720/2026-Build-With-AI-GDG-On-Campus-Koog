@@ -2,6 +2,13 @@
 
 Kotlin / Koog 기반 학습 에이전트 코드랩의 **CLI 배포** 안내입니다. 행사·코드랩 문맥은 [README.ko.md](./README.ko.md)를 참고하세요.
 
+## GitHub Releases
+
+- **릴리스 페이지:** [github.com/PJH720/2026-Build-With-AI-GDG-On-Campus-Koog/releases](https://github.com/PJH720/2026-Build-With-AI-GDG-On-Campus-Koog/releases)
+- **v1.0.0** — 변경 요약·사용 안내는 해당 릴리스 노트를 보세요. 로컬에서 `./gradlew distZip`로 만든 `build/distributions/study-buddy-agent-codelab-1.0.0.zip`을 릴리스에 첨부해 배포할 수 있습니다.
+
+**스택(요약):** JDK 21 · [Koog](https://github.com/JetBrains/koog) `koog-agents` **0.8.0** · 채팅 메모리(`agents-features-memory`) · 이벤트/도구 로깅(`agents-features-event-handler`) · Google Gemini (`GOOGLE_API_KEY`). Gradle 실행 시 JVM에 `--enable-native-access=ALL-UNNAMED`가 적용됩니다.
+
 ## How to Use
 
 ### 1. Prerequisites
