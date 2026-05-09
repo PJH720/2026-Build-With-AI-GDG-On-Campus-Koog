@@ -169,20 +169,18 @@ suspend fun runStudyTeam(apiKey: String) {
     println("\n=== 전문가 팀 작업 완료! ===")
 }
 
-// 대화형 과제 도움 세션
-suspend fun runStudySession(apiKey: String) {
-    val toolRegistry = ToolRegistry {
-        tool(::readFile)
-        tool(::saveNote)
-        tool(::listFiles)
-        tool(::generateExamPrep)
-    }
-
-    val agent = AIAgent(
+private fun createAgent(apiKey: String) =
+    AIAgent(
         promptExecutor = simpleGoogleAIExecutor(apiKey),
         systemPrompt = studyBuddyPrompt,
         llmModel = GoogleModels.Gemini2_5Flash,
-        toolRegistry = toolRegistry,
+        toolRegistry =
+            ToolRegistry {
+                tool(::readFile)
+                tool(::saveNote)
+                tool(::listFiles)
+                tool(::generateExamPrep)
+            },
     ) {
         install(ChatMemory) {
             chatHistoryProvider = InMemoryChatHistoryProvider()
@@ -193,47 +191,52 @@ suspend fun runStudySession(apiKey: String) {
         }
     }
 
+// CLI 대화형 세션 (Banner + Command 패턴 적용)
+suspend fun runStudySession(apiKey: String) {
+    val commandRegistry = CommandRegistry()
+    commandRegistry.registerAll(
+        HelpCommand(commandRegistry),
+        ExitCommand(),
+        ClearCommand(),
+    )
+
     Banner.printWelcome()
-
-    val commandRegistry =
-        CommandRegistry().apply {
-            register(ExitCommand())
-            register(ClearCommand())
-            register(HelpCommand(this))
-        }
-
-    var chatSessionId = "study-session"
+    var agent = createAgent(apiKey)
+    val chatSessionId = "study-session"
 
     while (true) {
         print("학생 > ")
-        val input = readLine()
+        val input = readLine()?.trim()
         if (input == null) {
             Banner.printGoodbye()
             break
         }
-        val trimmed = input.trim()
-        if (trimmed.isBlank()) continue
+        if (input.isBlank()) continue
 
-        val commandOutcome = commandRegistry.execute(trimmed)
-        when (commandOutcome) {
-            CommandResult.Exit -> {
-                Banner.printGoodbye()
-                break
+        if (input.startsWith("/")) {
+            when (val result = commandRegistry.execute(input)) {
+                CommandResult.Exit -> {
+                    Banner.printGoodbye()
+                    return
+                }
+                CommandResult.ClearSession -> {
+                    agent = createAgent(apiKey)
+                    continue
+                }
+                is CommandResult.Success -> continue
+                is CommandResult.Error -> {
+                    println("  ❌ ${result.message}")
+                    continue
+                }
+                null -> {
+                    println("  알 수 없는 명령어입니다. /help를 입력해보세요.")
+                    continue
+                }
             }
-            CommandResult.ClearSession -> {
-                chatSessionId = "study-session-${System.nanoTime()}"
-                continue
-            }
-            is CommandResult.Success -> continue
-            is CommandResult.Error -> {
-                println("\n${commandOutcome.message}\n")
-                continue
-            }
-            null -> { /* 에이전트로 전달 */ }
         }
 
         try {
-            val response = agent.run(trimmed, chatSessionId)
+            val response = agent.run(input, chatSessionId)
             println("\n조교 > $response\n")
         } catch (e: LLMClientException) {
             val msg = e.message.orEmpty()
@@ -244,11 +247,11 @@ suspend fun runStudySession(apiKey: String) {
             if (isQuota) {
                 System.err.println(
                     """
-                    
+
                     [할당량 초과] Gemini API 요청 한도에 걸렸습니다. (무료 등급은 모델·프로젝트별 일일 요청 수 제한이 있습니다.)
                     몇 분 후 재시도하거나, Google AI Studio에서 한도·청구를 확인하세요.
                     문서: https://ai.google.dev/gemini-api/docs/rate-limits
-                    
+
                     """.trimIndent(),
                 )
             } else {
