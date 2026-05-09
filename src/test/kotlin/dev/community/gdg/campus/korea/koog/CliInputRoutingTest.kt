@@ -91,10 +91,10 @@ class CliInputRoutingTest {
 class ResolveStudyRunModeTest {
 
     @Test
-    fun default_noFlag_emptyEnv_isTeam() {
-        assertEquals(StudyRunMode.Team, resolveStudyRunMode(emptyArray(), koogModeEnv = null))
-        assertEquals(StudyRunMode.Team, resolveStudyRunMode(emptyArray(), koogModeEnv = ""))
-        assertEquals(StudyRunMode.Team, resolveStudyRunMode(emptyArray(), koogModeEnv = "  "))
+    fun default_noFlag_emptyEnv_isRepl() {
+        assertEquals(StudyRunMode.Repl, resolveStudyRunMode(emptyArray(), koogModeEnv = null))
+        assertEquals(StudyRunMode.Repl, resolveStudyRunMode(emptyArray(), koogModeEnv = ""))
+        assertEquals(StudyRunMode.Repl, resolveStudyRunMode(emptyArray(), koogModeEnv = "  "))
     }
 
     @Test

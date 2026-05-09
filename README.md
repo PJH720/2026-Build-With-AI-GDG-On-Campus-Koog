@@ -19,6 +19,8 @@ export GOOGLE_API_KEY='YOUR_API_KEY'
 ./gradlew run
 ```
 
+기본 모드는 **대화형 REPL**(배너 → `학생 >` 입력 대기). 세 에이전트가 파일을 읽고 노트를 만드는 **일괄 파이프라인**은 `./gradlew run -- --team` 또는 `KOOG_MODE=team ./gradlew run` 입니다.
+
 The `run` task uses `standardInput = System.in` for interactive stdin. Use a real **terminal (TTY)** so prompts work the same way when you run the packaged CLI below.
 
 ### 3. Build an unpacked distribution (`installDist`)
@@ -64,7 +66,8 @@ Gradle may also emit a `.tar` next to the ZIP under `build/distributions/`; eith
 
 | 목적 | 명령 |
 |------|------|
-| 개발 실행 | `./gradlew run` |
+| 개발 실행 (대화형 기본) | `./gradlew run` |
+| 일괄 팀 파이프라인 | `./gradlew run -- --team` |
 | 로컬 배포 폴더 생성 | `./gradlew installDist` → `build/install/study-buddy-agent-codelab/bin/study-buddy-agent-codelab` |
 | ZIP 배포물 | `./gradlew distZip` → `build/distributions/study-buddy-agent-codelab-1.0.0.zip` 압축 해제 후 `bin/` 스크립트 실행 |
 
@@ -72,11 +75,11 @@ Gradle may also emit a `.tar` next to the ZIP under `build/distributions/`; eith
 
 ## 기본 진입점 동작
 
-현재 `main()`은 **`runStudyTeam`** 을 호출합니다. 즉, 배포 CLI를 실행하면 **Multi-Agent 학습 전문가 팀 파이프라인**이 한 번 실행되는 흐름입니다.
+`main()` 기본값은 **`runStudySession`** (대화형 REPL, 배너·`/help`·에이전트 대화). 같은 바이너리로 **Multi-Agent 팀 일괄 파이프라인**(`runStudyTeam`)을 쓰려면 실행 인자 **`--team`** 또는 환경 변수 **`KOOG_MODE=team`** (또는 `batch`, `pipeline`)을 사용합니다.
 
 ## 대화형 과제 세션 (`runStudySession`) 입력 규칙
 
-소스에 포함된 **`runStudySession`** 을 진입점으로 바꿔 사용할 때는 다음 규칙이 적용됩니다.
+대화형 모드(`기본`, `--repl`, `KOOG_MODE=repl` 등)에서는 다음 규칙이 적용됩니다.
 
 - **`/` 로 시작하는 줄**만 내부 CLI 명령(`/help`, `/exit`, `/clear` 등)으로 처리합니다.
 - **그 외 모든 입력**은 학습 에이전트(`AIAgent`)로 그대로 전달됩니다.

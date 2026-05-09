@@ -286,13 +286,13 @@ suspend fun runStudySession(apiKey: String) {
     }
 }
 
-/** 실행 모드: 기본값은 비대화형 팀 배치([runStudyTeam]). 대화형은 `--repl` 또는 `KOOG_MODE=repl`. */
+/** 실행 모드: 기본값은 대화형 REPL([runStudySession]). 비대화형 팀 배치는 `--team` 또는 `KOOG_MODE=team`. */
 internal enum class StudyRunMode {
     Team,
     Repl,
 }
 
-/** `--repl` / `--team`은 환경변수보다 우선한다. [koogModeEnv]는 테스트용 오버라이드; 기본은 `KOOG_MODE` 환경변수. */
+/** `--repl` / `--team`은 환경변수보다 우선한다. [koogModeEnv]는 테스트용 오버라이드; 기본은 `KOOG_MODE` 환경변수. 미설정 시 REPL. */
 internal fun resolveStudyRunMode(
     args: Array<String>,
     koogModeEnv: String? = System.getenv("KOOG_MODE"),
@@ -304,12 +304,12 @@ internal fun resolveStudyRunMode(
     if (hasTeam) return StudyRunMode.Team
 
     return when (koogModeEnv?.trim()?.lowercase()) {
-        null, "", "team", "batch", "pipeline" -> StudyRunMode.Team
-        "repl", "session", "interactive" -> StudyRunMode.Repl
+        null, "", "repl", "session", "interactive" -> StudyRunMode.Repl
+        "team", "batch", "pipeline" -> StudyRunMode.Team
         else ->
             error(
-                "KOOG_MODE 는 team(repl 전 외 기본) 또는 repl 입니다. " +
-                    "허용 예: team, batch, pipeline, repl, session, interactive",
+                "KOOG_MODE 는 미설정 시 repl(대화형)입니다. team(batch 파이프라인) 또는 repl 계열만 허용합니다. " +
+                    "허용 예: repl, session, interactive, team, batch, pipeline",
             )
     }
 }
