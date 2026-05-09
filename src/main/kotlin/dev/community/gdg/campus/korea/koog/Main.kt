@@ -22,9 +22,9 @@ val studyBuddyPrompt = """
 """.trimIndent()
 
 val toolRegistry = ToolRegistry {
-    tool(::listFiles)
     tool(::readFile)
     tool(::saveNote)
+    tool(::listFiles)
 }
 
 fun main() = runBlocking {
@@ -39,7 +39,12 @@ fun main() = runBlocking {
     )
 
     val response = agent.run(
-        "lecture-notes/week07-bst-basics.md 강의자료를 읽고, 핵심만 정리해서 복습 노트로 저장해줘"
+        """
+        1. assignments/hw-avl-tree.md 과제 요구사항을 읽어줘
+        2. notes/ 폴더에 있는 기존 복습 노트도 참고해줘
+        3. student-code/avl_tree.cpp 학생 코드를 분석해줘
+        4. 과제 풀이 가이드를 만들어서 notes/hw-avl-guide.md로 저장해줘
+        """.trimIndent()
     )
     println(response)
 }
