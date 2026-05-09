@@ -20,6 +20,10 @@ import dev.community.gdg.campus.korea.koog.tools.readFile
 import dev.community.gdg.campus.korea.koog.tools.saveNote
 import dev.community.gdg.campus.korea.koog.ui.Banner
 import kotlinx.coroutines.runBlocking
+import java.util.UUID
+
+/** Koog `agent.run` 두 번째 인자. `/clear`마다 갱신해 대화 메모리·세션 추적이 이전과 섞이지 않게 한다. */
+private fun newStudyChatSessionId(): String = "study-session-${UUID.randomUUID()}"
 
 val studyBuddyPrompt = """
     너는 컴퓨터공학과 학생의 과제와 시험 준비를 도와주는 조교야.
@@ -191,6 +195,24 @@ private fun createAgent(apiKey: String) =
         }
     }
 
+/** [runStudySession]과 동일한 분기: 슬래시면 레지스트리, 아니면 에이전트. 입력은 trim 되었고 비어 있지 않음. */
+sealed class CliInputRoute {
+    data class Command(val result: CommandResult) : CliInputRoute()
+
+    data object UnknownSlashCommand : CliInputRoute()
+
+    data class Agent(val message: String) : CliInputRoute()
+}
+
+suspend fun routeCliInput(trimmedNonBlankInput: String, registry: CommandRegistry): CliInputRoute {
+    require(trimmedNonBlankInput.isNotBlank()) { "trimmed non-blank input expected" }
+    if (!trimmedNonBlankInput.startsWith("/")) {
+        return CliInputRoute.Agent(trimmedNonBlankInput)
+    }
+    val result = registry.execute(trimmedNonBlankInput)
+    return if (result == null) CliInputRoute.UnknownSlashCommand else CliInputRoute.Command(result)
+}
+
 // CLI 대화형 세션 (Banner + Command 패턴 적용)
 suspend fun runStudySession(apiKey: String) {
     val commandRegistry = CommandRegistry()
@@ -202,7 +224,7 @@ suspend fun runStudySession(apiKey: String) {
 
     Banner.printWelcome()
     var agent = createAgent(apiKey)
-    val chatSessionId = "study-session"
+    var chatSessionId = newStudyChatSessionId()
 
     while (true) {
         print("학생 > ")
@@ -213,56 +235,92 @@ suspend fun runStudySession(apiKey: String) {
         }
         if (input.isBlank()) continue
 
-        if (input.startsWith("/")) {
-            when (val result = commandRegistry.execute(input)) {
-                CommandResult.Exit -> {
-                    Banner.printGoodbye()
-                    return
+        when (val route = routeCliInput(input, commandRegistry)) {
+            is CliInputRoute.Command ->
+                when (val result = route.result) {
+                    CommandResult.Exit -> {
+                        Banner.printGoodbye()
+                        return
+                    }
+                    CommandResult.ClearSession -> {
+                        chatSessionId = newStudyChatSessionId()
+                        agent = createAgent(apiKey)
+                        continue
+                    }
+                    is CommandResult.Success -> continue
+                    is CommandResult.Error -> {
+                        println("  ❌ ${result.message}")
+                        continue
+                    }
                 }
-                CommandResult.ClearSession -> {
-                    agent = createAgent(apiKey)
-                    continue
-                }
-                is CommandResult.Success -> continue
-                is CommandResult.Error -> {
-                    println("  ❌ ${result.message}")
-                    continue
-                }
-                null -> {
-                    println("  알 수 없는 명령어입니다. /help를 입력해보세요.")
-                    continue
-                }
+            CliInputRoute.UnknownSlashCommand -> {
+                println("  알 수 없는 명령어입니다. /help를 입력해보세요.")
+                continue
             }
-        }
+            is CliInputRoute.Agent -> {
+                try {
+                    val response = agent.run(route.message, chatSessionId)
+                    println("\n조교 > $response\n")
+                } catch (e: LLMClientException) {
+                    val msg = e.message.orEmpty()
+                    val isQuota =
+                        msg.contains("429") ||
+                            msg.contains("RESOURCE_EXHAUSTED") ||
+                            msg.contains("quota", ignoreCase = true)
+                    if (isQuota) {
+                        System.err.println(
+                            """
 
-        try {
-            val response = agent.run(input, chatSessionId)
-            println("\n조교 > $response\n")
-        } catch (e: LLMClientException) {
-            val msg = e.message.orEmpty()
-            val isQuota =
-                msg.contains("429") ||
-                    msg.contains("RESOURCE_EXHAUSTED") ||
-                    msg.contains("quota", ignoreCase = true)
-            if (isQuota) {
-                System.err.println(
-                    """
+                            [할당량 초과] Gemini API 요청 한도에 걸렸습니다. (무료 등급은 모델·프로젝트별 일일 요청 수 제한이 있습니다.)
+                            몇 분 후 재시도하거나, Google AI Studio에서 한도·청구를 확인하세요.
+                            문서: https://ai.google.dev/gemini-api/docs/rate-limits
 
-                    [할당량 초과] Gemini API 요청 한도에 걸렸습니다. (무료 등급은 모델·프로젝트별 일일 요청 수 제한이 있습니다.)
-                    몇 분 후 재시도하거나, Google AI Studio에서 한도·청구를 확인하세요.
-                    문서: https://ai.google.dev/gemini-api/docs/rate-limits
-
-                    """.trimIndent(),
-                )
-            } else {
-                System.err.println("\n[조교 호출 오류] ${e.message}\n")
+                            """.trimIndent(),
+                        )
+                    } else {
+                        System.err.println("\n[조교 호출 오류] ${e.message}\n")
+                    }
+                }
             }
         }
     }
 }
 
-fun main() = runBlocking {
-    val apiKey = System.getenv("GOOGLE_API_KEY")
-        ?: error("GOOGLE_API_KEY 환경변수를 설정해주세요!")
-    runStudyTeam(apiKey)
+/** 실행 모드: 기본값은 비대화형 팀 배치([runStudyTeam]). 대화형은 `--repl` 또는 `KOOG_MODE=repl`. */
+internal enum class StudyRunMode {
+    Team,
+    Repl,
 }
+
+/** `--repl` / `--team`은 환경변수보다 우선한다. [koogModeEnv]는 테스트용 오버라이드; 기본은 `KOOG_MODE` 환경변수. */
+internal fun resolveStudyRunMode(
+    args: Array<String>,
+    koogModeEnv: String? = System.getenv("KOOG_MODE"),
+): StudyRunMode {
+    val hasRepl = args.any { it == "--repl" }
+    val hasTeam = args.any { it == "--team" }
+    require(!(hasRepl && hasTeam)) { "--repl 과 --team 을 함께 쓸 수 없습니다." }
+    if (hasRepl) return StudyRunMode.Repl
+    if (hasTeam) return StudyRunMode.Team
+
+    return when (koogModeEnv?.trim()?.lowercase()) {
+        null, "", "team", "batch", "pipeline" -> StudyRunMode.Team
+        "repl", "session", "interactive" -> StudyRunMode.Repl
+        else ->
+            error(
+                "KOOG_MODE 는 team(repl 전 외 기본) 또는 repl 입니다. " +
+                    "허용 예: team, batch, pipeline, repl, session, interactive",
+            )
+    }
+}
+
+fun main(args: Array<String>) =
+    runBlocking {
+        val apiKey =
+            System.getenv("GOOGLE_API_KEY")
+                ?: error("GOOGLE_API_KEY 환경변수를 설정해주세요!")
+        when (resolveStudyRunMode(args)) {
+            StudyRunMode.Team -> runStudyTeam(apiKey)
+            StudyRunMode.Repl -> runStudySession(apiKey)
+        }
+    }

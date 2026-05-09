@@ -31,6 +31,11 @@ sealed class CommandResult {
     data object ClearSession : CommandResult()
 }
 
+/**
+ * `execute`의 반환 타입 `CommandResult?`에서 **`null`은 ‘등록된 명령 중 입력과 매칭되는 것이 하나도 없을 때’만** 의미한다.
+ * 슬래시 뒤 첫 토큰이 비어 있거나 공백만 있는 경우, 알려지지 않은 명령 이름인 경우 등은 `Command.matches` 기준으로 모두 매칭 실패로 처리되며,
+ * 별도의 `CommandResult`로 ‘파싱 실패’와 ‘미등록 명령’을 구분하지 않는다. 명령별 인자 오류는 각 `Command.execute`가 `CommandResult.Error`로 표현한다.
+ */
 class CommandRegistry {
     private val commands = mutableListOf<Command>()
 
@@ -44,6 +49,7 @@ class CommandRegistry {
 
     fun getAllCommands(): List<Command> = commands.toList()
 
+    /** 매칭되는 명령이 없으면 `null` — 의미는 이 클래스 블록 KDoc 참고. */
     suspend fun execute(input: String): CommandResult? {
         val trimmed = input.trim()
         val command = commands.find { it.matches(trimmed) } ?: return null
