@@ -4,6 +4,7 @@ import ai.koog.agents.core.agent.AIAgent
 import ai.koog.agents.core.tools.ToolRegistry
 import ai.koog.prompt.executor.clients.google.GoogleModels
 import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import dev.community.gdg.campus.korea.koog.tools.listFiles
 import dev.community.gdg.campus.korea.koog.tools.readFile
 import dev.community.gdg.campus.korea.koog.tools.saveNote
 import kotlinx.coroutines.runBlocking
@@ -21,6 +22,7 @@ val studyBuddyPrompt = """
 """.trimIndent()
 
 val toolRegistry = ToolRegistry {
+    tool(::listFiles)
     tool(::readFile)
     tool(::saveNote)
 }
